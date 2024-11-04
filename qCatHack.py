@@ -16,7 +16,6 @@ os.makedirs(data_directory, exist_ok=True)
 required_files = {
     "cathack.png": "https://github.com/Teapot321/qCatHack/raw/main/qCatHack_data/cathack.png",
     "esptool.exe": "https://github.com/Teapot321/qCatHack/raw/refs/heads/main/qCatHack_data/esptool.exe",
-    "CH9102.exe": "https://github.com/Teapot321/qCatHack/raw/refs/heads/main/qCatHack_data/CH9102.exe"
 }
 
 def check_and_download_files():
@@ -50,50 +49,28 @@ def install_esptool():
     if not os.path.exists(esptool_path):
         download_file("https://github.com/Teapot321/qCatHack/raw/refs/heads/main/qCatHack_data/esptool.exe", esptool_path)
 
-def install_driver():
-    driver_path = os.path.join(data_directory, 'CH9102.exe')
-    if not os.path.exists(driver_path):
-        download_file("https://github.com/Teapot321/qCatHack/raw/refs/heads/main/qCatHack_data/CH9102.exe", driver_path)
-
-def download_and_install_driver():
-    install_driver()
-    driver_path = os.path.join(data_directory, "CH9102.exe")
-
-    block_buttons()
-    loading_window = Toplevel(root)
-    loading_window.title("qCatHack")
-    loading_window.geometry("300x100")
-    loading_window.configure(bg="#050403")
-
-    loading_label = tk.Label(loading_window, text="Downlading Driver...", bg="#050403", fg="#ffffff", font=("Arial", 14))
-    loading_label.pack(pady=20)
-
-    root.update()
-
-    def download_driver():
-        try:
-            subprocess.run(driver_path, check=True)
-            messagebox.showinfo("Success", "Driver installed successfully!")
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to install driver: {e}")
-        finally:
-            loading_window.destroy()
-            unblock_buttons()
-
-    threading.Thread(target=download_driver).start()
-
 def get_latest_firmware_url():
-    return "https://github.com/Stachugit/CatHack/releases/latest/download/CatHack.bin"
+    return "https://github.com/Stachugit/CatHack/releases/latest/download/cathack.bin"
 
 def install_firmware():
     try:
         firmware_url = get_latest_firmware_url()
-        firmware_path = os.path.join(data_directory, "latest_firmware.bin")
+        firmware_path = os.path.join(data_directory, "cathack.bin")
 
-        response = requests.get(firmware_url)
+        response = requests.get(firmware_url, stream=True)
+        total_size = int(response.headers.get('content-length', 0))
+
+        block_size = 1024
+        wrote = 0 
+
         with open(firmware_path, 'wb') as f:
-            f.write(response.content)
-        flash_firmware(firmware_path)
+            for data in response.iter_content(block_size):
+                wrote = wrote + len(data)
+                f.write(data)
+                progress = wrote / total_size * 100
+                print(f"Загружено {progress}%")
+        print(f"Загрузка завершена, файл {firmware_path}")
+        messagebox.showinfo("Success", "Прошивка скачана!")
     except Exception as e:
         messagebox.showerror("Error", f"Failed to download firmware: {e}")
 
@@ -126,17 +103,21 @@ def flash_firmware(firmware_path):
 
 def start_installation():
     install_button.config(state=tk.DISABLED)
-    install_firmware()
+    firmware_path = os.path.join(data_directory, "cathack.bin")
+    if not os.path.exists(firmware_path):
+        install_firmware()
+    else:
+        flash_firmware(firmware_path)
 
 def block_buttons():
     install_button.config(state=tk.DISABLED, bg="gray", fg="white")
     com_port_menu.config(state=tk.DISABLED, bg="gray", fg="white")
-    driver_button.config(state=tk.DISABLED, bg="gray", fg="white")
+    cathack_github.config(state=tk.DISABLED, bg="gray", fg="white")
 
 def unblock_buttons():
     install_button.config(state=tk.NORMAL, bg="#050403", fg="#ff8e19")
     com_port_menu.config(state=tk.NORMAL, bg="#050403", fg="#ff8e19")
-    driver_button.config(state=tk.NORMAL, bg="#050403", fg="#ff8e19")
+    cathack_github.config(state=tk.NORMAL, bg="#050403", fg="#ff8e19")
 
 root = tk.Tk()
 root.title("qCatHack")
@@ -155,7 +136,7 @@ install_button = tk.Button(root, text="Install", command=lambda: threading.Threa
                            bg="#050403", fg="#ff8e19", borderwidth=2, relief="solid", highlightbackground="#d9d9d9",
                            highlightcolor="white", font=("Fixedsys", 20))
 
-driver_button = tk.Button(root, text="?", command=download_and_install_driver,
+cathack_github = tk.Button(root, text="?", command=lambda: threading.Thread(target=os.startfile("https://github.com/Stachugit/CatHack")).start(),
                           bg="#050403", fg="#ff8e19", borderwidth=2, relief="solid", highlightbackground="#d9d9d9",
                           highlightcolor="white", font=("Fixedsys", 11))
 
@@ -173,19 +154,19 @@ def on_leave_install(event):
     install_button.config(bg="#050403", fg="#ff8e19")
 
 def on_enter_driver(event):
-    driver_button.config(bg="white", fg="#050403", highlightbackground="#d9d9d9")
+    cathack_github.config(bg="white", fg="#050403", highlightbackground="#d9d9d9")
 
 def on_leave_driver(event):
-    driver_button.config(bg="#050403", fg="#ff8e19")
+    cathack_github.config(bg="#050403", fg="#ff8e19")
 
 install_button.bind("<Enter>", on_enter_install)
 install_button.bind("<Leave>", on_leave_install)
-driver_button.bind("<Enter>", on_enter_driver)
-driver_button.bind("<Leave>", on_leave_driver)
+cathack_github.bind("<Enter>", on_enter_driver)
+cathack_github.bind("<Leave>", on_leave_driver)
 
 install_button.place(relx=0.17, rely=0.11, anchor='center')
 com_port_menu.place(relx=0.40, rely=0.11, anchor='center')
-driver_button.place(relx=0.31, rely=0.11, anchor='center')
+cathack_github.place(relx=0.31, rely=0.11, anchor='center')
 
 install_esptool()
 
